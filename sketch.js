@@ -2,9 +2,9 @@
 
 //p5
 
-  var mx = 100
+  var mx = 100;
   var val = {
-    v: 20,
+    v: 100,
     get val() {
       return Math.min(Math.max(this.v, 0), mx)
     },
@@ -12,8 +12,9 @@
       if (v) this.v = v
     }
   }
-  var ww = 50
-  var hh = 500
+  var angle = 0;
+  var ww = 50;
+  var hh = 500;
 
 function preload() {
   mcSpicy = loadImage("mcspicy.png");
@@ -28,8 +29,9 @@ function setup() {
   line(20,20,200,200);
   imageMode(CENTER);
 
-  ball = matter.makeBall(100, 40, 80,{restitution:0.9});
-  block = matter.makeBall(200, 40, 30);
+  ball = matter.makeBall(200, 200, 80,{restitution:0.9});
+  ball.freeze()
+  block = matter.makeBall(200, 300, 30);
   
   //Add a title
   fill('#000');
@@ -38,7 +40,24 @@ function setup() {
   // floor = matter.makeBarrier(width / 2, height, width, 50);
 }
 
+var progBarDir = 1
+function goUpOrDown (n) {
+  if (n === 100) {
+    progBarDir = -1 
+  } else if (n === 1) {
+    progBarDir = 1
+  }
+  return n + progBarDir
+}
 
+function aimCannon() {
+  if (keyIsDown(UP_ARROW)) { 
+    angle = angle - 1
+  } else if (keyIsDown(DOWN_ARROW)) { 
+    angle = angle + 1
+  }
+  Matter.Body.setAngle(ball.body, radians(angle))
+}
 
 function keyPressed() {
   var arrowMap = {};
@@ -48,7 +67,6 @@ function keyPressed() {
     arrowMap[RIGHT_ARROW] = 1;
     spriteDir = arrowMap[keyCode];
   }
-  // ball.setVelocity(10,10)
 
   if (keyCode === UP_ARROW || keyCode === DOWN_ARROW) {
     arrowMap[UP_ARROW] = 10;
@@ -56,6 +74,7 @@ function keyPressed() {
     val.v = val.v + arrowMap[keyCode];
   }
   
+  if (val.v > 1) val.v = 100
 }
 
 function keyReleased() {
@@ -65,7 +84,16 @@ function keyReleased() {
       block.freeze();
     }
   }
-  
+  if (keyCode ===32) {
+    ball.unfreeze()
+    Matter.Body.applyForce(ball.body, {
+      x: ball.getPositionX(),
+      y: ball.getPositionY()
+    }, {
+      x: Math.cos(ball.body.angle)*(100-val.v)/100,
+      y: Math.sin(ball.body.angle)*(100-val.v)/100
+    })
+  }
 }
 
 function draw() {
@@ -75,20 +103,27 @@ function draw() {
   fill(127);
   ball.show();
   block.show();
-  image(mcSpicy, block.getPositionX(), block.getPositionY(), 75, 75)
+  push();
+  translate(block.getPositionX(), block.getPositionY())
+  rotate(radians(angle))
+  image(mcSpicy, 0, 0, 75, 75)
+  pop();
   axes();
   // image(moonImg, moon.getPositionX(), moon.getPositionY());
     // Draw the background
-
   push();
   fill(222);
   rect(20, 0, ww, hh);
   // Draw the fill
   fill(111);
   var fillVal = Math.min(Math.max(val.v/ mx, 0), 1);
-  console.log(fillVal)
+
   rect(20, 0, ww, fillVal * hh);
   pop()
+  if (keyIsDown(32)) { // Spacebar
+    val.v = goUpOrDown(val.v);
+  }
+  aimCannon()
 
   for (var i = lines.length - 1; i >= 0; i--) {
     lines[i].show();
