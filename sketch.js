@@ -15,6 +15,7 @@
   var angle = 0;
   var ww = 50;
   var hh = 500;
+  var balls = [];
 
 function preload() {
   mcSpicy = loadImage("mcspicy.png");
@@ -29,8 +30,6 @@ function setup() {
   line(20,20,200,200);
   imageMode(CENTER);
 
-  ball = matter.makeBall(200, 200, 80,{restitution:0.9});
-  ball.freeze()
   block = matter.makeBall(200, 300, 30);
   
   //Add a title
@@ -56,7 +55,6 @@ function aimCannon() {
   } else if (keyIsDown(DOWN_ARROW)) { 
     angle = angle + 1
   }
-  Matter.Body.setAngle(ball.body, radians(angle))
 }
 
 function keyPressed() {
@@ -84,11 +82,15 @@ function keyReleased() {
       block.freeze();
     }
   }
+  var xx = block.getPositionX() + 30 * Math.cos(radians(angle));
+  var yy = block.getPositionY() + 30 * Math.sin(radians(angle));
   if (keyCode ===32) {
-    ball.unfreeze()
+    var ball = matter.makeBall(xx + 40 * Math.cos(radians(angle)), yy + 40 * Math.sin(radians(angle)), 80,{restitution:0.9})
+    balls.push(ball)
+    Matter.Body.setAngle(ball.body, radians(angle))
     Matter.Body.applyForce(ball.body, {
-      x: ball.getPositionX(),
-      y: ball.getPositionY()
+      x: xx,
+      y: yy
     }, {
       x: Math.cos(ball.body.angle)*(100-val.v)/100,
       y: Math.sin(ball.body.angle)*(100-val.v)/100
@@ -101,8 +103,15 @@ function draw() {
   background(255);
 
   fill(127);
-  ball.show();
   block.show();
+  for (var j = balls.length - 1; j >= 0; j--) {
+    var ball = balls[j];
+    ball.show();
+    if (ball.isOffCanvas()) {
+      matter.forget(ball);
+    }
+  }
+
   push();
   translate(block.getPositionX(), block.getPositionY())
   rotate(radians(angle))
