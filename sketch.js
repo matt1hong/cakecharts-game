@@ -17,6 +17,126 @@
   var hh = 500;
   var balls = [];
 
+class Shooter {
+  constructor(ball) {
+    this.ball = ball
+    this.angle = 0
+    this.r = 30
+    this.bulletRadius = 40
+    this.direction = 1
+    this.powerBar = new PowerBar()
+    this.bullets = []
+  }
+
+  get x() {
+    return this.ball.getPositionX();
+  }
+
+  get y() {
+    return this.ball.getPositionY();
+  }
+
+  get muzzleX() {
+    return this.ball.getPositionX() + r * Math.cos(radians(this.angle)) + bulletRadius * Math.cos(radians(angle))
+  }
+
+  get muzzleY() {
+    return this.ball.getPositionY() + r * Math.sin(radians(this.angle)) + bulletRadius * Math.sin(radians(angle))
+  }
+
+  aim() {
+    if (keyIsDown(UP_ARROW)) { 
+      this.angle = this.angle - 1
+    } else if (keyIsDown(DOWN_ARROW)) { 
+      this.angle = this.angle + 1
+    }
+  }
+
+  shoot() {
+    var bullet = matter.makeBall(this.muzzleX, this.muzzleY, this.bulletRadius,{restitution:0.9})
+    this.bullets.push(bullet)
+    Matter.Body.setAngle(bullet.body, radians(this.angle))
+    Matter.Body.applyForce(bullet.body, {
+      x: this.muzzleX,
+      y: this.muzzleY
+    }, {
+      x: Math.cos(bullet.body.angle)*(100-this.powerBar.level)/100,
+      y: Math.sin(bullet.body.angle)*(100-this.powerBar.level)/100
+    })
+  }
+
+  checkForWall() {
+    var pos = this.ball.getPositionX();
+    if ((pos < margin && this.direction === -1)
+      || (pos > width - margin && this.direction === 1)) {
+        this.direction = 0
+      }
+  }
+
+  move() {
+    this.checkForWall()
+    if (this.direction === 0 && !this.ball.isFrozen()) {
+      this.ball.freeze()
+    } else if (this.direction === 1 || this.direction === -1) {
+      this.ball.unfreeze()
+      this.ball.setVelocityX(this.direction*0.7) 
+    }
+  }
+}
+
+// class Bullet {
+//   constructor(shooter) {
+//     this.shooter = shooter
+//     this.x = shooter.x
+//     this.y = shooter.y
+//     this.r = 40
+//   }
+
+//   fire() {
+//     var xx = block.getPositionX() + 30 * Math.cos(radians(angle));
+//     var yy = block.getPositionY() + 30 * Math.sin(radians(angle));
+//     if (keyCode ===32) {
+//       var ball = matter.makeBall(xx + 40 * Math.cos(radians(angle)), yy + 40 * Math.sin(radians(angle)), 40,{restitution:0.9})
+//       balls.push(ball)
+//       Matter.Body.setAngle(ball.body, radians(angle))
+//       Matter.Body.applyForce(ball.body, {
+//         x: xx,
+//         y: yy
+//       }, {
+//         x: Math.cos(ball.body.angle)*(100-val.v)/100,
+//         y: Math.sin(ball.body.angle)*(100-val.v)/100
+//       })
+//     }
+//   }
+// }
+
+class Line {
+
+}
+
+class PowerBar {
+  constructor() {
+    this.max = 100
+    this.level = 100
+    this.height = 500
+    this.width = 50
+    this.direction = 1
+    this.bgColor = 222
+    this.color = 111
+  }
+
+  progress() {
+    if (keyIsDown(32)) {
+      if (this.level === 100) {
+        this.direction = -1 
+      } else if (n === 1) {
+        this.direction = 1
+      }
+      this.level = this.level + this.direction
+    }
+  }
+}
+
 function preload() {
   mcSpicy = loadImage("mcspicy.png");
 }
@@ -66,13 +186,6 @@ function keyPressed() {
     spriteDir = arrowMap[keyCode];
   }
 
-  if (keyCode === UP_ARROW || keyCode === DOWN_ARROW) {
-    arrowMap[UP_ARROW] = 10;
-    arrowMap[DOWN_ARROW] = -10;
-    val.v = val.v + arrowMap[keyCode];
-  }
-  
-  if (val.v > 1) val.v = 100
 }
 
 function keyReleased() {
