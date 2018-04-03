@@ -78,35 +78,6 @@ class Shooter {
   }
 }
 
-// class Bullet {
-//   constructor(shooter) {
-//     this.shooter = shooter
-//     this.x = shooter.x
-//     this.y = shooter.y
-//     this.r = 40
-//   }
-
-//   fire() {
-//     var xx = block.getPositionX() + 30 * Math.cos(radians(angle));
-//     var yy = block.getPositionY() + 30 * Math.sin(radians(angle));
-//     if (keyCode ===32) {
-//       var ball = matter.makeBall(xx + 40 * Math.cos(radians(angle)), yy + 40 * Math.sin(radians(angle)), 40,{restitution:0.9})
-//       balls.push(ball)
-//       Matter.Body.setAngle(ball.body, radians(angle))
-//       Matter.Body.applyForce(ball.body, {
-//         x: xx,
-//         y: yy
-//       }, {
-//         x: Math.cos(ball.body.angle)*(100-val.v)/100,
-//         y: Math.sin(ball.body.angle)*(100-val.v)/100
-//       })
-//     }
-//   }
-// }
-
-class Line {
-
-}
 
 class PowerBar {
   constructor() {
@@ -156,6 +127,9 @@ function preload() {
 let player1;
 let conn;
 var s;
+var lineChart;
+
+var prices = [2.99, 4.00, 1.00, 3.5];
 
 function setup() {
   var a = ['#666666']
@@ -168,7 +142,8 @@ function setup() {
   createCanvas(600, 600);
 
   matter.init();
-  lineChart();
+  
+  lineChart = new LineChart(prices);
   line(20,20,200,200);
   imageMode(CENTER);
 
@@ -195,7 +170,7 @@ function keyPressed() {
 function keyReleased() {
   if (keyCode === LEFT_ARROW || keyCode === RIGHT_ARROW) {
     player1.direction = 0
-    var currentLine = findCurrentLine(player1.ball)
+    var currentLine = lineChart.findLine(player1.ball.body.position.x)
     conn = matter.connect(player1.ball, currentLine)
     if (!player1.ball.isFrozen()) {
       player1.ball.freeze() 
@@ -235,6 +210,78 @@ var Particle = function(x, y, attributes){
     
   }
 }
+
+
+class LineChart {
+  constructor(data) {
+      this.lines = []
+      this.clicked = []
+      this.height = height
+      this.numPoints = 100
+      this.interval = 100/this.numPoints
+      this.points = this.interpolatePoints(data, this.numPoints)
+      this.createLines()
+  }
+
+  findLine(posX) {
+      return this.lines.filter(function(line){
+      return line.body.bounds.min.x<posX && line.body.bounds.max.x>posX
+    })[0]
+  }
+
+  interpolatePoints(arr, howMany) {
+    var newArr = []
+    for (var i = 0; i < arr.length-1; i++) {
+      var tempArr = []
+      var interval = (arr[i+1] - arr[i])/howMany
+      for (var j = 0; j < howMany; j++) {
+        tempArr.push(arr[i] + interval * j)
+      }
+      newArr = newArr.concat(tempArr)
+    }
+    newArr.push(arr[arr.length-1])
+    return newArr
+  }
+
+  centerLine(x1,y1,x2,y2) {
+    var centerX = (x1+x2)/2, centerY = (y1+y2)/2
+    var width = Math.sqrt(Math.pow(y2-y1,2) + Math.pow(x2-x1,2))
+    var radians = Math.atan((y2-y1)/(x2-x1))
+    return [centerX, centerY, width, radians]
+  }
+
+  createLines() {
+    var adjustedPrice = 0;
+    var centered;
+    var lastPrice = this.height - map(this.points[0], 0, 5, 0, 100);
+    var x1 = 0;
+    for (var i=1; i<this.points.length; i++) {
+      x1 = (i-1)*this.interval;
+      adjustedPrice = this.height - map(this.points[i], 0, 5, 0, 100);
+      if (this.clicked.indexOf(x1) < 0) {
+        centered = this.centerLine(
+          x1, 
+          lastPrice, 
+          i*this.interval, 
+          adjustedPrice
+        )
+        this.lines.push(matter.makeBarrier(
+          centered[0], centered[1], centered[2], 1, {
+            angle:centered[3]
+          })
+        );
+      }
+      lastPrice = adjustedPrice;
+    }
+  }
+
+  draw() {
+    for (var i = this.lines.length - 1; i >= 0; i--) {
+      this.lines[i].show()
+    }
+  }
+}
+
 
 var Splasher = function(pos, colors){
 
@@ -326,12 +373,10 @@ var Splasher = function(pos, colors){
 function draw() {
   // put the drawing code here
   background(255)
-  axes()
-  for (var i = lines.length - 1; i >= 0; i--) {
-    lines[i].show()
-  }
+  // axes()
   s.update();
   s.draw();
+  lineChart.draw();
 
   player1.show()
   player1.move()
